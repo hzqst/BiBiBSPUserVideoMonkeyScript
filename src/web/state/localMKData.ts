@@ -650,6 +650,11 @@ export const isLlmDebugInfoGm = (): boolean => {
     return GM_getValue('llm_debug_info_gm', false)
 }
 
+/** LLM判定为屏蔽时是否同时把UP主uid加入插件内置黑名单（uid精确屏蔽），默认false */
+export const isLlmBlacklistUidGm = (): boolean => {
+    return GM_getValue('llm_blacklist_uid_gm', false)
+}
+
 export default {
     getTripleRate,
     isTripleRateBlockingStatus,
@@ -784,5 +789,6 @@ export default {
     getLlmMaxOutputTokensGm,
     getLlmCacheTtlGm,
     isLlmSendCoverGm,
-    isLlmDebugInfoGm
+    isLlmDebugInfoGm,
+    isLlmBlacklistUidGm
 }

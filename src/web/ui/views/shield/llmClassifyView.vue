@@ -35,7 +35,8 @@ export default defineComponent({
         maxOutputTokens: localMKData.getLlmMaxOutputTokensGm(),
         cacheTtl: localMKData.getLlmCacheTtlGm(),
         sendCover: localMKData.isLlmSendCoverGm(),
-        debugInfo: localMKData.isLlmDebugInfoGm()
+        debugInfo: localMKData.isLlmDebugInfoGm(),
+        blacklistUid: localMKData.isLlmBlacklistUidGm()
       },
       testing: false,
       testResult: '',
@@ -62,6 +63,7 @@ export default defineComponent({
       GM_setValue('llm_cache_ttl_gm', form.cacheTtl)
       GM_setValue('llm_send_cover_gm', form.sendCover)
       GM_setValue('llm_debug_info_gm', form.debugInfo)
+      GM_setValue('llm_blacklist_uid_gm', form.blacklistUid)
     },
     /** 按当前表单值组装请求配置，测试连接使用未保存的输入 */
     buildConfig(): LlmRequestConfig {
@@ -239,6 +241,14 @@ export default defineComponent({
         </el-form-item>
         <el-form-item label="调试信息">
           <el-switch v-model="form.debugInfo" active-text="输出调用调试信息"></el-switch>
+        </el-form-item>
+        <el-form-item label="自动拉黑UP主">
+          <el-switch v-model="form.blacklistUid" active-text="判定为屏蔽时把UP主uid加入内置黑名单"></el-switch>
+          <div class="mk-form-tip">开启后，LLM判定某视频需要屏蔽时，该视频UP主的uid会写入规则面板的「用户uid(精确匹配)」，
+            此后该UP主的所有视频都会被本地规则直接屏蔽，不再调用接口。
+            已缓存的判定结果同样生效，因此刚开启时可能一次性补写较多历史视频的UP主。
+            已存在于「用户uid白名单」中的uid会跳过，不会写入。该操作会累积修改你的规则库，并随规则导出带走，可在规则面板手动移除。
+          </div>
         </el-form-item>
         <el-form-item label="当日已调用">
           <el-tag>{{ dailyUsage.count }} 次</el-tag>

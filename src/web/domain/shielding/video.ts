@@ -338,7 +338,7 @@ const shieldingOtherVideoParameter = async (result: VideoShieldData, videoData: 
         })
         .then(() => {
             // LLM分类作为最后一道兜底：命中缓存立即屏蔽，未命中则入队异步判定并放行本次渲染
-            const llmRes = llmClassifyQueue.checkAndEnqueue(videoData, result.videoInfo?.pic ?? '', method);
+            const llmRes = llmClassifyQueue.checkAndEnqueue(videoData, result.videoInfo?.pic ?? '', method, userInfo?.uid ?? 0);
             if (llmRes.state) return Promise.reject(llmRes);
         })
         .then(() => {

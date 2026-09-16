@@ -3,9 +3,11 @@ import {classify} from "@/core/llm/llmClient.ts";
 import {fetchCover} from "@/core/llm/coverFetcher.ts";
 import llmClassifyDexie from "@/core/cache/llmClassifyDexie.ts";
 import defUtil from "@/core/util/defUtil.ts";
+import ruleUtil from "@/core/util/ruleUtil.ts";
 import localMKData, {
     getLlmDailyLimitGm,
     getLlmRequestIntervalGm,
+    isLlmBlacklistUidGm,
     isLlmClassifyEnabledGm,
     isLlmDebugInfoGm,
     isLlmSendCoverGm
@@ -34,6 +36,8 @@ interface QueueTask {
     coverUrl: string;
     /** 命中后的屏蔽方式，remove或hide */
     method: string;
+    /** UP主uid，取自详情接口，0表示无效 */
+    uid: number;
 }
 
 /** 取本地日期字符串 */
@@ -109,22 +113,24 @@ class LlmClassifyQueue {
     /**
      * 判定视频并决定是否入队。
      * 缓存命中直接返回判定结果，未命中则入队异步判定并放行本次渲染。
+     * @param uid UP主uid，取自详情接口result.userInfo.uid，不要用页面提取的videoData.uid
      */
-    checkAndEnqueue(videoData: VideoData, coverUrl: string, method: string): BlockResult {
+    checkAndEnqueue(videoData: VideoData, coverUrl: string, method: string, uid: number): BlockResult {
         const bv = videoData.bv
         // 开关关闭时整体不生效，已缓存的判定结果同样不再参与屏蔽
         if (!bv || !isLlmClassifyEnabledGm()) return returnTempVal
         const cached = this.#cache.get(bv)
         if (cached) {
-            return cached.blocked
-                ? {state: true, type: ruleType, matching: cached.reason}
-                : returnTempVal
+            if (!cached.blocked) return returnTempVal
+            // 缓存命中的屏蔽同样拉黑UP主，否则是否拉黑取决于该视频判定时开关是否已开
+            this.#blacklistUid(uid)
+            return {state: true, type: ruleType, matching: cached.reason}
         }
         // 缓存尚未加载完成时跳过，避免对已有判定结果的视频重复调用
         if (!this.#cacheLoaded || !this.#canRequest()) return returnTempVal
         if (this.#pending.has(bv)) return returnTempVal
         this.#pending.add(bv)
-        this.#queue.push({videoData, coverUrl, method})
+        this.#queue.push({videoData, coverUrl, method, uid})
         if (!this.#processing) {
             this.#processing = true
             void this.#processNext()
@@ -173,7 +179,7 @@ class LlmClassifyQueue {
 
     /** 对单个视频执行一次判定，并在判定为屏蔽时事后移除元素 */
     async #judge(task: QueueTask): Promise<void> {
-        const {videoData, coverUrl, method} = task
+        const {videoData, coverUrl, method, uid} = task
         const bv = videoData.bv
         if (!bv) return
         const input: LlmClassifyInput = {
@@ -210,12 +216,28 @@ class LlmClassifyQueue {
         console.log(msg)
         eventEmitter.send('打印信息', msg)
         if (decision.blocked) {
+            this.#blacklistUid(uid)
             eventEmitter.send('event-屏蔽视频元素', {
                 res: {state: true, type: ruleType, matching: decision.reason},
                 method,
                 videoData
             })
         }
+    }
+
+    /**
+     * 判定为屏蔽时把UP主uid写入插件内置黑名单（uid精确屏蔽）。
+     * 白名单内的uid与无效uid跳过，避免出现同时命中黑白名单的矛盾状态。
+     */
+    #blacklistUid(uid: number): void {
+        if (!isLlmBlacklistUidGm() || !uid || uid <= 0) return
+        if (ruleUtil.findRuleItemValue('precise_uid_white', uid)) return
+        const {status} = ruleUtil.addRulePreciseUid(uid, false)
+        if (!status) return
+        eventEmitter.send('刷新规则信息', false)
+        const msg = `[LLM分类] 已将UP主uid=${uid}加入内置黑名单(uid精确屏蔽)`
+        console.log(msg)
+        eventEmitter.send('打印信息', msg)
     }
 }
 
