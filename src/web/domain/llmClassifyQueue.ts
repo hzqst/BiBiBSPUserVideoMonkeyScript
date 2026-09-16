@@ -4,9 +4,11 @@ import {fetchCover} from "@/core/llm/coverFetcher.ts";
 import llmClassifyDexie from "@/core/cache/llmClassifyDexie.ts";
 import defUtil from "@/core/util/defUtil.ts";
 import ruleUtil from "@/core/util/ruleUtil.ts";
+import ruleMatchingUtil from "@/core/util/ruleMatchingUtil.ts";
 import localMKData, {
     getLlmDailyLimitGm,
     getLlmRequestIntervalGm,
+    getLlmTitleKeywordsGm,
     isLlmBlacklistUidGm,
     isLlmClassifyEnabledGm,
     isLlmDebugInfoGm,
@@ -126,6 +128,8 @@ class LlmClassifyQueue {
             this.#blacklistUid(uid)
             return {state: true, type: ruleType, matching: cached.reason}
         }
+        // 标题关键词初筛不通过时不送检，避免无谓的数据外发与费用
+        if (!this.#matchTitleKeywords(videoData.title ?? '')) return returnTempVal
         // 缓存尚未加载完成时跳过，避免对已有判定结果的视频重复调用
         if (!this.#cacheLoaded || !this.#canRequest()) return returnTempVal
         if (this.#pending.has(bv)) return returnTempVal
@@ -136,6 +140,22 @@ class LlmClassifyQueue {
             void this.#processNext()
         }
         return returnTempVal
+    }
+
+    /**
+     * 标题关键词初筛：标题包含任一关键词才送检。
+     * 关键词列表为空时不过滤，避免配置为空导致全部视频都不再送检。
+     */
+    #matchTitleKeywords(title: string): boolean {
+        const keywords = getLlmTitleKeywordsGm()
+        if (keywords.length === 0) return true
+        const matched = ruleMatchingUtil.fuzzyMatch(keywords, title)
+        if (matched === null && isLlmDebugInfoGm()) {
+            const msg = `[LLM分类] 标题未命中关键词，跳过送检，标题：${title}`
+            console.log(msg)
+            eventEmitter.send('打印信息', msg)
+        }
+        return matched !== null
     }
 
     /** 判断是否具备发起新调用的条件 */

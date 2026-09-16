@@ -30,6 +30,7 @@ export default defineComponent({
         systemPrompt: localMKData.getLlmSystemPromptGm(),
         userPrompt: localMKData.getLlmUserPromptGm(),
         timeout: localMKData.getLlmTimeoutGm(),
+        titleKeywords: localMKData.getLlmTitleKeywordsGm().join('\n'),
         requestInterval: localMKData.getLlmRequestIntervalGm(),
         dailyLimit: localMKData.getLlmDailyLimitGm(),
         rpmLimit: localMKData.getLlmRpmLimitGm(),
@@ -58,6 +59,7 @@ export default defineComponent({
       GM_setValue('llm_system_prompt_gm', form.systemPrompt)
       GM_setValue('llm_user_prompt_gm', form.userPrompt)
       GM_setValue('llm_timeout_gm', form.timeout)
+      GM_setValue('llm_title_keywords_gm', form.titleKeywords)
       GM_setValue('llm_request_interval_gm', form.requestInterval)
       GM_setValue('llm_daily_limit_gm', form.dailyLimit)
       GM_setValue('llm_rpm_limit_gm', form.rpmLimit)
@@ -137,6 +139,7 @@ export default defineComponent({
                 title="隐私与费用提示">
         <div>开启后，视频标题、UP主名称与视频封面会被发送到你填写的第三方接口，请确认你接受该数据外发行为。</div>
         <div>判定结果按BV号缓存，同一个视频只会调用一次；调用仅对已通过全部本地规则的视频发起。</div>
+        <div>可通过「标题关键词初筛」把送检范围缩小到标题命中关键词的视频，未命中时不会发送任何数据。</div>
         <div>本页配置不会被规则导出功能带走，但API Key以明文保存在脚本存储中，请勿分享脚本存储备份。</div>
       </el-alert>
       <div class="el-horizontal-center">
@@ -228,6 +231,14 @@ export default defineComponent({
         <span>调用控制与缓存</span>
       </template>
       <el-form label-width="130px" size="small">
+        <el-form-item label="标题关键词初筛">
+          <el-input v-model="form.titleKeywords" type="textarea" :rows="4"
+                    placeholder="每行一个关键词，留空表示全部送检"></el-input>
+          <div class="mk-form-tip">只有视频标题包含其中任意一个关键词时才送检，用于在不改判定标准的前提下缩小外发范围与费用。
+            留空表示不筛选、全部送检；已命中判定缓存的视频不受此限制。
+            匹配不区分大小写，关键词按行解析，行内首尾空白会被忽略。
+          </div>
+        </el-form-item>
         <el-form-item label="调用间隔(秒)">
           <el-input-number v-model="form.requestInterval" :min="0" :max="60" :step="1"></el-input-number>
         </el-form-item>

@@ -660,6 +660,18 @@ export const getLlmRpmLimitGm = (): number => {
     return GM_getValue('llm_rpm_limit_gm', 0)
 }
 
+/**
+ * 获取LLM送检前的标题关键词初筛列表，默认空表示不筛选。
+ * 存储形态为按行分隔的文本，读取时统一转小写以便与标题做大小写无关的包含匹配。
+ */
+export const getLlmTitleKeywordsGm = (): string[] => {
+    const raw = GM_getValue('llm_title_keywords_gm', '')
+    return String(raw)
+        .split('\n')
+        .map(item => item.trim().toLowerCase())
+        .filter(item => item.length > 0)
+}
+
 export default {
     getTripleRate,
     isTripleRateBlockingStatus,
@@ -796,5 +808,6 @@ export default {
     isLlmSendCoverGm,
     isLlmDebugInfoGm,
     isLlmBlacklistUidGm,
-    getLlmRpmLimitGm
+    getLlmRpmLimitGm,
+    getLlmTitleKeywordsGm
 }
