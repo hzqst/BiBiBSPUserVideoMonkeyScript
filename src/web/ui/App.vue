@@ -19,6 +19,7 @@ import ruleManagementView from './views/rule/ruleManagementView.vue'
 import excludeURLsView from './views/settings/excludeURLsView.vue'
 import RightFloatingLayoutView from "./views/settings/rightFloatingLayoutView.vue";
 import conditionalityView from "./views/rule/conditionalityView.vue";
+import llmClassifyView from "./views/shield/llmClassifyView.vue";
 import defUtil from "../core/util/defUtil.ts";
 
 
@@ -43,7 +44,8 @@ export default defineComponent({
     sheetDialog,
     bulletWordManagementView,
     excludeURLsView,
-    conditionalityView
+    conditionalityView,
+    llmClassifyView
   },
   data() {
     return {
@@ -141,6 +143,9 @@ export default defineComponent({
         </el-tab-pane>
         <el-tab-pane label="条件限制" lazy name="条件限制">
           <conditionalityView/>
+        </el-tab-pane>
+        <el-tab-pane label="LLM分类" lazy name="LLM分类">
+          <llmClassifyView/>
         </el-tab-pane>
         <el-tab-pane label="输出信息" name="输出信息">
           <outputInformationView/>

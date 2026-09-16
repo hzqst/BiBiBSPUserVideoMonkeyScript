@@ -7,6 +7,7 @@ import type {
     CombinationRuleItem,
     CombinationRuleListItem,
 } from "@/types/storage";
+import type {LlmJsonMode, LlmProtocol, LlmReasoningEffort} from "@/types/llm";
 
 /** 设置面板边框颜色 */
 const setBorderColor = (color: string): void => {
@@ -556,6 +557,99 @@ export const isDelLiveBottomBannerAdGm = (): boolean => {
     return GM_getValue('is_del_live_bottom_banner_ad_val_gm', true)
 }
 
+/** LLM 分类默认系统提示词，用户可在面板中自定义 */
+const defLlmSystemPrompt: string = `你是哔哩哔哩视频内容判定助手。用户会提供一条视频的标题、UP主名称，可能还有封面图。
+请判断这条视频是否属于用户希望屏蔽的内容，并按要求的 JSON 结构返回结果。
+
+判定原则：
+1. 只依据给定信息判断，不要脑补视频正文内容。
+2. 信息不足以判断时，blocked 取 false，不要把不确定的内容判为屏蔽。
+3. reason 用一句简短中文说明判定依据。`
+
+/** LLM 分类默认用户提示词模板，支持 {title} {name} {bv} 占位符 */
+const defLlmUserPrompt: string = `标题：{title}
+UP主：{name}`
+
+/** 是否启用LLM多模态分类屏蔽，默认false */
+export const isLlmClassifyEnabledGm = (): boolean => {
+    return GM_getValue('llm_classify_enabled_gm', false)
+}
+
+/** 获取LLM接口协议类型，默认openai-compatible */
+export const getLlmProtocolGm = (): LlmProtocol => {
+    return GM_getValue('llm_protocol_gm', 'openai-compatible')
+}
+
+/** 获取LLM接口基址，不含具体路径，默认空 */
+export const getLlmBaseUrlGm = (): string => {
+    return GM_getValue('llm_base_url_gm', '')
+}
+
+/** 获取LLM接口API Key，默认空 */
+export const getLlmApiKeyGm = (): string => {
+    return GM_getValue('llm_api_key_gm', '')
+}
+
+/** 获取LLM模型名，默认空 */
+export const getLlmModelGm = (): string => {
+    return GM_getValue('llm_model_gm', '')
+}
+
+/** 获取LLM推理强度，默认关闭 */
+export const getLlmReasoningEffortGm = (): LlmReasoningEffort => {
+    return GM_getValue('llm_reasoning_effort_gm', '关闭')
+}
+
+/** 获取LLM结构化输出模式，默认自动降级 */
+export const getLlmJsonModeGm = (): LlmJsonMode => {
+    return GM_getValue('llm_json_mode_gm', '自动')
+}
+
+/** 获取LLM系统提示词，默认使用内置分类提示词 */
+export const getLlmSystemPromptGm = (): string => {
+    return GM_getValue('llm_system_prompt_gm', defLlmSystemPrompt)
+}
+
+/** 获取LLM用户提示词模板，支持 {title} {name} {bv} 占位符 */
+export const getLlmUserPromptGm = (): string => {
+    return GM_getValue('llm_user_prompt_gm', defLlmUserPrompt)
+}
+
+/** 获取LLM单次请求超时时间（秒），默认15 */
+export const getLlmTimeoutGm = (): number => {
+    return GM_getValue('llm_timeout_gm', 15)
+}
+
+/** 获取LLM调用间隔（秒），默认2 */
+export const getLlmRequestIntervalGm = (): number => {
+    return GM_getValue('llm_request_interval_gm', 2)
+}
+
+/** 获取LLM每日调用上限，默认200，0表示不限制 */
+export const getLlmDailyLimitGm = (): number => {
+    return GM_getValue('llm_daily_limit_gm', 200)
+}
+
+/** 获取LLM输出token上限，默认1024，开启推理时推理token也计入该上限 */
+export const getLlmMaxOutputTokensGm = (): number => {
+    return GM_getValue('llm_max_output_tokens_gm', 1024)
+}
+
+/** 获取LLM判定结果缓存天数，默认7 */
+export const getLlmCacheTtlGm = (): number => {
+    return GM_getValue('llm_cache_ttl_gm', 7)
+}
+
+/** 是否在送检时附带视频封面，默认true */
+export const isLlmSendCoverGm = (): boolean => {
+    return GM_getValue('llm_send_cover_gm', true)
+}
+
+/** 是否输出LLM调用的调试信息（接口基址、模型、是否附带封面），默认false */
+export const isLlmDebugInfoGm = (): boolean => {
+    return GM_getValue('llm_debug_info_gm', false)
+}
+
 export default {
     getTripleRate,
     isTripleRateBlockingStatus,
@@ -674,5 +768,21 @@ export default {
     /** 获取组合规则方案列表 */
     getCombinationRuleListGm(): CombinationRuleListItem[] {
         return GM_getValue('combination_rule_list_gm', [])
-    }
+    },
+    isLlmClassifyEnabledGm,
+    getLlmProtocolGm,
+    getLlmBaseUrlGm,
+    getLlmApiKeyGm,
+    getLlmModelGm,
+    getLlmReasoningEffortGm,
+    getLlmJsonModeGm,
+    getLlmSystemPromptGm,
+    getLlmUserPromptGm,
+    getLlmTimeoutGm,
+    getLlmRequestIntervalGm,
+    getLlmDailyLimitGm,
+    getLlmMaxOutputTokensGm,
+    getLlmCacheTtlGm,
+    isLlmSendCoverGm,
+    isLlmDebugInfoGm
 }

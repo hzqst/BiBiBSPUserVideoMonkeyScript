@@ -20,6 +20,9 @@
     "GM_xmlhttpRequest",
     "GM_getResourceText"
   ],
+  "@connect": [
+    "*"
+  ],
   "@exclude": [
     "*://message.bilibili.com/pages/nav/header_sync",
     "*://message.bilibili.com/pages/nav/index_new_pc_sync",

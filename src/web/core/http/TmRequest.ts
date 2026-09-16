@@ -3,8 +3,10 @@ interface RequestConfig {
     method?: string;
     headers?: Record<string, string>;
     data?: any;
-    responseType?: 'json' | 'text';
+    responseType?: 'json' | 'text' | 'arraybuffer';
     params?: Record<string, any>;
+    /** 超时时间（毫秒），不设置则不限制 */
+    timeout?: number;
 }
 
 interface TmResponse<T = any> {
@@ -52,11 +54,14 @@ function createAxiosLikeClient(): AxiosLikeClient {
                 headers: mergedConfig.headers,
                 data: mergedConfig.data,
                 responseType: mergedConfig.responseType,
+                timeout: mergedConfig.timeout,
                 onload: (response: any) => {
                     if (response.status >= 200 && response.status < 300) {
                         const responseData = mergedConfig.responseType === 'json'
                             ? tryParseJson(response.responseText)
-                            : response.responseText;
+                            : mergedConfig.responseType === 'arraybuffer'
+                                ? response.response
+                                : response.responseText;
 
                         resolve({
                             data: responseData,
@@ -66,6 +71,9 @@ function createAxiosLikeClient(): AxiosLikeClient {
                     } else {
                         reject(createError(response, 'HTTP Error'));
                     }
+                },
+                ontimeout: (response: any) => {
+                    reject(createError(response, 'Timeout'));
                 },
                 onerror: (error: any) => {
                     reject(createError(error, 'Network Error'));

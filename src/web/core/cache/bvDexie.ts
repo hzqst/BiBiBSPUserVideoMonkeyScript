@@ -32,6 +32,7 @@ interface VideoInfoData {
     dimension: any
     like: number
     argue_msg: string
+    pic?: string
 }
 
 interface UserInfoData {

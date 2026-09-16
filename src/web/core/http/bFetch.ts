@@ -82,6 +82,7 @@ const fetchGetVideoInfo = async (bvId: string): Promise<FetchVideoInfoResult> =>
             is_upower_exclusive,
             duration,
             dimension,
+            pic,
             stat: {
                 view,
                 danmaku,
@@ -138,6 +139,7 @@ const fetchGetVideoInfo = async (bvId: string): Promise<FetchVideoInfoResult> =>
         dimension,
         like,
         argue_msg,
+        pic,
     }
 
     const userInfo: UserInfo = {

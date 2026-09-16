@@ -90,6 +90,8 @@ export interface VideoInfo {
     like: number
     /** 争议警告消息 */
     argue_msg: string
+    /** 视频封面图地址 */
+    pic?: string
 }
 
 /** B站API返回的用户信息 */

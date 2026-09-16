@@ -51,6 +51,7 @@ import bvDexie from "../../core/cache/bvDexie.ts";
 import {videoCacheManager} from "@/core/cache/videoCacheManager.ts";
 import ruleMatchingUtil from "../../core/util/ruleMatchingUtil.ts";
 import combinationRulesShielding from "./combinationRules.ts";
+import llmClassifyQueue from "@/domain/llmClassifyQueue.ts";
 
 /** 检查视频tag执行多重tag组合屏蔽 */
 const asyncBlockVideoTagPreciseCombination = async (tags: string[]): Promise<void> => {
@@ -249,7 +250,7 @@ eventEmitter.on('event:检查其他视频参数', async (videoData: VideoData, m
             }
         }
     }
-    const verificationIns = await shieldingOtherVideoParameter(videoRes as any, videoData);
+    const verificationIns = await shieldingOtherVideoParameter(videoRes as any, videoData, method);
     if (verificationIns.state) {
         eventEmitter.send('event-屏蔽视频元素', {res: verificationIns, method, videoData})
     }
@@ -269,7 +270,7 @@ eventEmitter.on('event-屏蔽视频元素', ({res, method = "remove", videoData}
 })
 
 /** 异步深度视频屏蔽链：通过API获取的完整视频/用户信息，依次执行所有屏蔽检查的promise链 */
-const shieldingOtherVideoParameter = async (result: VideoShieldData, videoData: VideoData): Promise<BlockResult> => {
+const shieldingOtherVideoParameter = async (result: VideoShieldData, videoData: VideoData, method: string = "remove"): Promise<BlockResult> => {
     const {tags = [], userInfo, videoInfo} = result
     return asyncBlockUserUidAndName(userInfo.uid, userInfo.name)
         .then(() => {
@@ -334,6 +335,11 @@ const shieldingOtherVideoParameter = async (result: VideoShieldData, videoData: 
         .then(() => {
             const mergeData = {...result, ...videoData}
             return combinationRulesShielding.asyncBlockCombinationRulePlan(mergeData as any)
+        })
+        .then(() => {
+            // LLM分类作为最后一道兜底：命中缓存立即屏蔽，未命中则入队异步判定并放行本次渲染
+            const llmRes = llmClassifyQueue.checkAndEnqueue(videoData, result.videoInfo?.pic ?? '', method);
+            if (llmRes.state) return Promise.reject(llmRes);
         })
         .then(() => {
             return returnTempVal;
