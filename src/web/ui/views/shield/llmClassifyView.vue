@@ -3,7 +3,15 @@ import {defineComponent} from 'vue';
 import localMKData from "@/state/localMKData.ts";
 import llmClassifyQueue from "@/domain/llmClassifyQueue.ts";
 import {classify} from "@/core/llm/llmClient.ts";
+import defUtil from "@/core/util/defUtil.ts";
 import type {LlmRequestConfig} from "@/types/llm";
+
+/**
+ * 表单配置写入存储的防抖包装。
+ * 表单的深层监听会在输入框每次按键时触发，而单次写入涉及十余个配置项，
+ * 需要合并连续输入，避免长文本输入时高频访问脚本存储导致卡顿。
+ */
+const persistDebounced = defUtil.debounce((persist: () => void): void => persist(), 300)
 
 /**
  * LLM多模态分类屏蔽设置页面
@@ -35,7 +43,7 @@ export default defineComponent({
     }
   },
   methods: {
-    /** 把表单配置写入GM存储，各项改动实时生效 */
+    /** 把表单配置写入GM存储，各项改动停止输入300毫秒后生效 */
     persistAll() {
       const form = this.form
       GM_setValue('llm_classify_enabled_gm', form.enabled)
@@ -107,7 +115,7 @@ export default defineComponent({
     form: {
       deep: true,
       handler() {
-        this.persistAll()
+        persistDebounced(() => this.persistAll())
       }
     }
   }
