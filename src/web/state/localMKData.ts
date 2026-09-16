@@ -655,6 +655,11 @@ export const isLlmBlacklistUidGm = (): boolean => {
     return GM_getValue('llm_blacklist_uid_gm', false)
 }
 
+/** 获取LLM每分钟请求数上限，默认0表示不限制 */
+export const getLlmRpmLimitGm = (): number => {
+    return GM_getValue('llm_rpm_limit_gm', 0)
+}
+
 export default {
     getTripleRate,
     isTripleRateBlockingStatus,
@@ -790,5 +795,6 @@ export default {
     getLlmCacheTtlGm,
     isLlmSendCoverGm,
     isLlmDebugInfoGm,
-    isLlmBlacklistUidGm
+    isLlmBlacklistUidGm,
+    getLlmRpmLimitGm
 }

@@ -60,6 +60,8 @@ export interface LlmRequestConfig {
     maxOutputTokens: number;
     /** 单次请求超时时间（秒） */
     timeout: number;
+    /** 每分钟最多发出的请求数，0表示不限制 */
+    rpmLimit: number;
 }
 
 /** 持久化到 IndexedDB 的屏蔽判定记录 */

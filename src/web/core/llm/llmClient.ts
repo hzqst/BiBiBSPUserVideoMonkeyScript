@@ -1,4 +1,5 @@
 import {defTmRequest} from "@/core/http/TmRequest.ts";
+import defUtil from "@/core/util/defUtil.ts";
 import {
     getLlmApiKeyGm,
     getLlmBaseUrlGm,
@@ -7,6 +8,7 @@ import {
     getLlmModelGm,
     getLlmProtocolGm,
     getLlmReasoningEffortGm,
+    getLlmRpmLimitGm,
     getLlmSystemPromptGm,
     getLlmTimeoutGm,
     getLlmUserPromptGm
@@ -365,6 +367,33 @@ const isParameterRejected = (error: any): boolean => {
     return typeof status === 'number' && [400, 404, 415, 422].includes(status)
 }
 
+/** RPM限流的滑动窗口长度 */
+const rpmWindowMs = 60 * 1000
+
+/** 窗口内实际发出请求的时间戳，按时间升序，仅记录真实HTTP请求 */
+const requestTimestamps: number[] = []
+
+/**
+ * 按RPM上限等待到窗口内有空闲配额。
+ * 统计的是真实发出的HTTP请求，因此结构化输出降级重试的每一次请求都单独占一个配额。
+ */
+const waitForRpmQuota = async (rpmLimit: number): Promise<void> => {
+    if (!(rpmLimit > 0)) return
+    while (true) {
+        const now = Date.now()
+        while (requestTimestamps.length > 0 && now - requestTimestamps[0] >= rpmWindowMs) {
+            requestTimestamps.shift()
+        }
+        if (requestTimestamps.length < rpmLimit) return
+        await defUtil.wait(rpmWindowMs - (now - requestTimestamps[0]))
+    }
+}
+
+/** 记录一次即将发出的请求，占用一个RPM配额 */
+const markRequestSent = (): void => {
+    requestTimestamps.push(Date.now())
+}
+
 /** 从本地存储读取LLM请求配置 */
 export const readConfigFromStorage = (): LlmRequestConfig => {
     return {
@@ -377,7 +406,8 @@ export const readConfigFromStorage = (): LlmRequestConfig => {
         reasoningEffort: getLlmReasoningEffortGm(),
         jsonMode: getLlmJsonModeGm(),
         maxOutputTokens: getLlmMaxOutputTokensGm(),
-        timeout: getLlmTimeoutGm()
+        timeout: getLlmTimeoutGm(),
+        rpmLimit: getLlmRpmLimitGm()
     }
 }
 
@@ -396,6 +426,8 @@ export const classify = async (input: LlmClassifyInput, config: LlmRequestConfig
         const request = buildRequest(config, input, strategy)
         let responseData: any
         try {
+            await waitForRpmQuota(config.rpmLimit)
+            markRequestSent()
             const response = await defTmRequest.request({
                 url: request.url,
                 method: 'POST',

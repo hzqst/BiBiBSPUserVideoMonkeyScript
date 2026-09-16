@@ -32,6 +32,7 @@ export default defineComponent({
         timeout: localMKData.getLlmTimeoutGm(),
         requestInterval: localMKData.getLlmRequestIntervalGm(),
         dailyLimit: localMKData.getLlmDailyLimitGm(),
+        rpmLimit: localMKData.getLlmRpmLimitGm(),
         maxOutputTokens: localMKData.getLlmMaxOutputTokensGm(),
         cacheTtl: localMKData.getLlmCacheTtlGm(),
         sendCover: localMKData.isLlmSendCoverGm(),
@@ -59,6 +60,7 @@ export default defineComponent({
       GM_setValue('llm_timeout_gm', form.timeout)
       GM_setValue('llm_request_interval_gm', form.requestInterval)
       GM_setValue('llm_daily_limit_gm', form.dailyLimit)
+      GM_setValue('llm_rpm_limit_gm', form.rpmLimit)
       GM_setValue('llm_max_output_tokens_gm', form.maxOutputTokens)
       GM_setValue('llm_cache_ttl_gm', form.cacheTtl)
       GM_setValue('llm_send_cover_gm', form.sendCover)
@@ -78,7 +80,8 @@ export default defineComponent({
         reasoningEffort: form.reasoningEffort as any,
         jsonMode: form.jsonMode as any,
         maxOutputTokens: form.maxOutputTokens,
-        timeout: form.timeout
+        timeout: form.timeout,
+        rpmLimit: form.rpmLimit
       }
     },
     /** 使用当前表单配置发送一条测试数据，验证接口连通性与返回解析 */
@@ -231,6 +234,13 @@ export default defineComponent({
         <el-form-item label="每日调用上限">
           <el-input-number v-model="form.dailyLimit" :min="0" :max="100000" :step="10"></el-input-number>
           <div class="mk-form-tip">0表示不限制。达到上限后当天不再发起调用。</div>
+        </el-form-item>
+        <el-form-item label="每分钟上限(RPM)">
+          <el-input-number v-model="form.rpmLimit" :min="0" :max="600" :step="1"></el-input-number>
+          <div class="mk-form-tip">0表示不限制。按滑动窗口统计一分钟内真实发出的请求数，超出配额时会等待到窗口释放。
+            结构化输出降级重试的每一次请求都会单独占用一个配额，因此该值需要按接口的实际限额留出余量。
+            本页的「发送测试请求」同样受该限制。
+          </div>
         </el-form-item>
         <el-form-item label="判定缓存天数">
           <el-input-number v-model="form.cacheTtl" :min="1" :max="365" :step="1"></el-input-number>
