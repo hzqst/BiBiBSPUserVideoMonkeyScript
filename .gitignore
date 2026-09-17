@@ -7,4 +7,5 @@ yarn.lock
 pnpm-lock.yaml
 rollup.build.css
 /.*
+!/.github
 skills-lock.json

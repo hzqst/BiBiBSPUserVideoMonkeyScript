@@ -1,0 +1,69 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # 与本地开发环境的 pnpm 版本保持一致
+          version: 10.30.2
+
+      - uses: actions/setup-node@v4
+        with:
+          # 与本地开发环境的 Node 版本保持一致
+          node-version: 24
+
+      # pnpm-lock.yaml 未入库，必须跳过冻结锁文件校验
+      - name: 安装依赖
+        run: pnpm install --no-frozen-lockfile
+
+      # tag 与 tamper_monkey.json 的 @version 不一致时仅告警，不阻断发布
+      - name: 校验 tag 与 @version 是否一致
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          declared=$(jq -r '.["@version"]' tamper_monkey.json)
+          tagged="${GITHUB_REF_NAME#v}"
+          echo "tamper_monkey.json @version = $declared，tag = $GITHUB_REF_NAME"
+          if [ "$tagged" != "$declared" ]; then
+            echo "::warning::tag $GITHUB_REF_NAME 与 tamper_monkey.json 的 @version $declared 不一致，产物头部版本号可能与 tag 不符"
+          fi
+
+      - name: 构建
+        run: pnpm build
+
+      # 产物固定名为 dist/local_build.js，发布时按油猴别名重命名
+      - name: 整理产物
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp dist/local_build.js release/BIBIShield_v2.user.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BIBIShield_v2-${{ github.ref_name }}-${{ github.sha }}
+          path: release/BIBIShield_v2.user.js
+          if-no-files-found: error
+
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" release/BIBIShield_v2.user.js \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
